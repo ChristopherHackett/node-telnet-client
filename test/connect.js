@@ -4,7 +4,7 @@ var telnet = process.env.NODETELNETCLIENT_COV
 var nodeunit = require('nodeunit');
 var net = require('net');
 
-var socket, server, callbackCount;
+var socket, server, callbackCount, maxIdleTime;
 
 exports.socket = {
   setUp: function(callback) {
@@ -12,7 +12,9 @@ exports.socket = {
     callbackCount = 0;
     server = net.createServer(function(c) {
       callbackCount++;
-      c.end();
+      setTimeout(function(){
+        c.end();
+      }, maxIdleTime);
     })
     server.listen(2323, function(err) {
       callback();
@@ -26,6 +28,7 @@ exports.socket = {
   },
 
   "connect": function(test) {
+    maxIdleTime = 0;
     socket.connect({
       host: '127.0.0.1',
       port: 2323 //not using 23 is a service port could need sudo 
@@ -34,6 +37,26 @@ exports.socket = {
       test.ok(callbackCount == 1, "Client did connect");
       test.done();
     });
+  },
+
+  "timeout": function(test) {
+    var requestIdleTime = 100;
+    var params = {
+      host: '127.0.0.1',
+      port: 2323,
+      timeout: requestIdleTime
+    };
+    maxIdleTime = requestIdleTime * 1.5;
+    socket.on('timeout', function() {
+      clearTimeout(connectionTimeoutGuard);
+      test.ok(callbackCount == 1, "Client did connect");
+      socket.end();
+      test.done();
+    });
+    var connectionTimeoutGuard = setTimeout(function() {
+      test.ok(false, "Test failed as exceeded period timeout event should have happened")
+    }, maxIdleTime);
+    socket.connect(params);
   }
 };
 
@@ -146,6 +169,3 @@ exports.login = {
     });
   }
 };
-
-
-

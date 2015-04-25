@@ -57,6 +57,22 @@ exports.socket = {
       test.ok(false, "Test failed as exceeded period timeout event should have happened")
     }, maxIdleTime);
     socket.connect(params);
+  },
+
+  "destroy": function(test) {
+    maxIdleTime = 100;
+    var params = {
+      host: '127.0.0.1',
+      port: 2323
+    };
+    socket.on('end', function() {
+      test.ok(callbackCount == 1, "Client did connect");
+      socket.destroy();
+      socket.exec('NOT TO BE SENT');
+      test.ok(callbackCount == 1, "Client did not send another message");
+      test.done();
+    });
+    socket.connect(params);
   }
 };
 
